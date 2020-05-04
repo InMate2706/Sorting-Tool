@@ -1,0 +1,443 @@
+package hyperskill.Project_1;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.*;
+
+public class Main {
+
+    public static void main(final String[] args) {
+        String[] string = {"-sortingType", "byCount", "-inputFile", "input.txt"};
+
+        start(string);
+    }
+
+    public static void start(String[] arg) {
+        String parameter = "", dataType = "", pathToFile = "", output_File_Name = "";
+
+        try {
+            for (int i = 0; i < arg.length; i++) {
+                switch (arg[i]) {
+                    case "-dataType":
+                        for (int j = i + 1; j < arg.length; j++) {
+                            if (arg[j].equals("line") || arg[j].equals("long") || arg[j].equals("word")) {
+                                dataType = arg[j];
+                            }
+                        }
+                        if (dataType.isEmpty() && i == arg.length - 1) {
+                            throw new Exception("No data type defined!");
+                        }
+                        break;
+                    case "-sortingType":
+                        for (int j = i + 1; j < arg.length; j++) {
+                            if (arg[j].equals("byCount") || arg[j].equals("natural")) {
+                                parameter = arg[j];
+                            }
+                        }
+                        if (parameter.isEmpty() && i == arg.length - 1) {
+                            throw new Exception("No sorting type defined!");
+                        }
+                        break;
+                    case "-inputFile":
+                        pathToFile = arg[i + 1];
+                        break;
+                    case "-outputFile":
+                        output_File_Name = arg[i + 1];
+                        break;
+                    case "natural":
+                    case "byCount":
+                    case "long":
+                    case "line":
+                    case "word":
+                        break;
+                }
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.err.println("Enter file name.");
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+
+
+        switch (parameter) {
+            case "byCount":
+                switch (dataType) {
+                    case "long":
+                        long_ByCount(pathToFile, output_File_Name);
+                        break;
+                    case "word":
+                        line_OR_word_ByCount(dataType, pathToFile, output_File_Name);
+                        break;
+                    default:
+                        line_OR_word_ByCount("line", pathToFile, output_File_Name);
+                }
+                break;
+            default:
+                switch (dataType) {
+                    case "long":
+                        long_Natural(pathToFile, output_File_Name);
+                        break;
+                    case "word":
+                        line_OR_word_Natural(dataType, pathToFile, output_File_Name);
+                        break;
+                    default:
+                        line_OR_word_Natural("line", pathToFile, output_File_Name);
+                }
+        }
+    }
+
+    public static int findCounts(List<String> list, String string) {
+        int count = 0;
+        for (String string1 : list) {
+            if (string1.equals(string)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public static int findCounts(List<Integer> list, Integer integer) {
+        int count = 0;
+        for (Integer integer1 : list) {
+            if (integer1.equals(integer)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public static void line_OR_word_ByCount(String dataType, String pathToFile, String output_File_Name) {
+        List<String> sortedDataEntries = new LinkedList<>();
+        StringBuilder result = new StringBuilder("");
+
+        if (pathToFile.isEmpty()) {
+            Scanner scanner = new Scanner(System.in);
+            switch (dataType) {
+                case "line":
+                    while (scanner.hasNextLine()) {
+                        sortedDataEntries.add(scanner.nextLine());
+                    }
+                    result.append("Total lines: ");
+                    break;
+                case "word":
+                    while (scanner.hasNext()) {
+                        sortedDataEntries.add(scanner.next());
+                    }
+                    result.append("Total words: ");
+                    break;
+            }
+        } else {
+            switch (dataType) {
+                case "line":
+                    try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                        while (scanner.hasNextLine()) {
+                            sortedDataEntries.add(scanner.nextLine());
+                        }
+                    } catch (FileNotFoundException e) {
+                        System.err.println("No such file exists.");
+                    }
+                    result.append("Total lines: ");
+                    break;
+                case "word":
+                    try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                        while (scanner.hasNext()) {
+                            sortedDataEntries.add(scanner.next());
+                        }
+                    } catch (FileNotFoundException e) {
+                        System.err.println("No such file exists.");
+                    }
+                    result.append("Total words: ");
+                    break;
+            }
+        }
+
+        Map<String, Integer> dataEntryToCount = new LinkedHashMap<>();
+
+        for (int i = 0; i < sortedDataEntries.size(); i++) {
+            if (dataEntryToCount.containsValue(sortedDataEntries.get(i))) {
+                continue;
+            }
+            dataEntryToCount.put(sortedDataEntries.get(i), findCounts(sortedDataEntries, sortedDataEntries.get(i)));
+        }
+
+        Set<Map.Entry<String, Integer>> entrySet = dataEntryToCount.entrySet();
+
+        List<String> keys = new LinkedList<>();
+        List<Integer> value = new LinkedList<>();
+
+        int max_value = Collections.max(dataEntryToCount.values());
+        List<String> list = new ArrayList<>();
+
+        for (int i = 1; i <= max_value; i++) {
+            for (Map.Entry<String, Integer> pair : entrySet) {
+                if (pair.getValue() == i) {
+                    list.add(pair.getKey());
+                }
+            }
+            Collections.sort(list);
+            keys.addAll(list);
+            list.clear();
+        }
+
+        value.addAll(dataEntryToCount.values());
+        Collections.sort(value);
+
+        if (output_File_Name.isEmpty()) {
+            result.append(sortedDataEntries.size() + ".\n");
+
+            for (int i = 0; i < value.size(); i++) {
+                result.append(keys.get(i) + ": " + value.get(i) + " time(s), ");
+                result.append(String.format("%d%%\n", Math.round((float) value.get(i) / sortedDataEntries.size() * 100)));
+            }
+            System.out.println(result);
+
+        } else {
+            result.append(sortedDataEntries.size() + ".\r\n");
+
+            for (int i = 0; i < value.size(); i++) {
+                result.append(keys.get(i) + ": " + value.get(i) + " time(s), ");
+                result.append(String.format("%d%%\r\n", Math.round((float) value.get(i) / sortedDataEntries.size() * 100)));
+            }
+            try (PrintWriter printWriter = new PrintWriter(new File(output_File_Name))) {
+                printWriter.print(result);
+            } catch (FileNotFoundException e) {
+                System.err.println("File not found");
+            }
+        }
+    }
+
+    public static void long_ByCount(String pathToFile, String output_File_Name) {
+        List<Integer> sortedDataEntries = new LinkedList<>();
+        StringBuilder result = new StringBuilder("Total numbers: ");
+
+        if (pathToFile.isEmpty()) {
+            Scanner scanner = new Scanner(System.in);
+            while (scanner.hasNext()) {
+                if (scanner.hasNextInt()) {
+                    sortedDataEntries.add(scanner.nextInt());
+                } else {
+                    String string = scanner.next();
+                    System.out.println("\"" + string + "\"" + " isn`t a long. It`s skipped.");
+                }
+            }
+        } else {
+            try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                while (scanner.hasNext()) {
+                    if (scanner.hasNextInt()) {
+                        sortedDataEntries.add(scanner.nextInt());
+                    } else {
+                        String string = scanner.next();
+                        System.out.println("\"" + string + "\"" + " isn`t a long. It`s skipped.");
+                    }
+                }
+            } catch (FileNotFoundException e) {
+                System.err.println("No such file exists.");
+            }
+        }
+
+        Map<Integer, Integer> dataEntryToCount = new LinkedHashMap<>();
+
+        for (int i = 0; i < sortedDataEntries.size(); i++) {
+            if (dataEntryToCount.containsKey(sortedDataEntries.get(i))) {
+                continue;
+            }
+            dataEntryToCount.put(sortedDataEntries.get(i), findCounts(sortedDataEntries, sortedDataEntries.get(i)));
+        }
+
+        Set<Map.Entry<Integer, Integer>> entrySet = dataEntryToCount.entrySet();
+        List<Integer> keys = new LinkedList<>();
+        List<Integer> value = new LinkedList<>();
+        int max_value = Collections.max(dataEntryToCount.values());
+
+        List<Integer> list = new ArrayList<>();
+        for (int i = 1; i <= max_value; i++) {
+            for (Map.Entry<Integer, Integer> pair : entrySet) {
+                if (pair.getValue() == i) {
+                    list.add(pair.getKey());
+                }
+            }
+            if (!list.isEmpty()) {
+                Collections.sort(list);
+                keys.addAll(list);
+                list.clear();
+            }
+        }
+
+        value.addAll(dataEntryToCount.values());
+        Collections.sort(value);
+
+        if (output_File_Name.isEmpty()) {
+            result.append(sortedDataEntries.size() + ".\n");
+
+            for (int i = 0; i < value.size(); i++) {
+                result.append(keys.get(i) + ": " + value.get(i) + " time(s), ");
+                result.append(String.format("%d%%\n", Math.round((float) value.get(i) / sortedDataEntries.size() * 100)));
+            }
+            System.out.println(result);
+
+        } else {
+            result.append(sortedDataEntries.size() + ".\r\n");
+
+            for (int i = 0; i < value.size(); i++) {
+                result.append(keys.get(i) + ": " + value.get(i) + " time(s), ");
+                result.append(String.format("%d%%\r\n", Math.round((float) value.get(i) / sortedDataEntries.size() * 100)));
+            }
+            try (PrintWriter printWriter = new PrintWriter(new File(output_File_Name))) {
+                printWriter.print(result);
+            } catch (FileNotFoundException e) {
+                System.err.println("File not found");
+            }
+        }
+    }
+
+    public static void line_OR_word_Natural(String dataType, String pathToFile, String output_File_Name) {
+        List<String> sortedDataEntries = new LinkedList<>();
+        StringBuilder result = new StringBuilder("");
+        if (pathToFile.isEmpty()) {
+            Scanner scanner = new Scanner(System.in);
+            switch (dataType) {
+                case "line":
+                    while (scanner.hasNextLine()) {
+                        sortedDataEntries.add(scanner.nextLine());
+                    }
+                    result.append("Total lines: ");
+                    break;
+                case "word":
+                    while (scanner.hasNext()) {
+                        sortedDataEntries.add(scanner.next());
+                    }
+                    result.append("Total words: ");
+                    break;
+            }
+        } else {
+            switch (dataType) {
+                case "line":
+                    try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                        while (scanner.hasNextLine()) {
+                            sortedDataEntries.add(scanner.nextLine());
+                        }
+                    } catch (FileNotFoundException e) {
+                        System.err.println("No such file exists.");
+                    }
+                    result.append("Total lines: ");
+                    break;
+                case "word":
+                    try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                        while (scanner.hasNext()) {
+                            sortedDataEntries.add(scanner.next());
+                        }
+                    } catch (FileNotFoundException e) {
+                        System.err.println("No such file exists.");
+                    }
+                    result.append("Total words: ");
+                    break;
+            }
+        }
+
+        Collections.sort(sortedDataEntries);
+
+        if (output_File_Name.isEmpty()) {
+            switch (dataType) {
+                case "line":
+                    result.append(sortedDataEntries.size() + "\n" + "Sorted data:\n");
+
+                    for (int i = 0; i < sortedDataEntries.size(); i++) {
+                        result.append(sortedDataEntries.get(i) + "\n");
+                    }
+                    break;
+                case "word":
+                    result.append(sortedDataEntries.size() + "\n" + "Sorted data: ");
+
+                    for (int i = 0; i < sortedDataEntries.size(); i++) {
+                        result.append(sortedDataEntries.get(i) + " ");
+                    }
+                    break;
+            }
+            System.out.println(result);
+
+        } else {
+            switch (dataType) {
+                case "line":
+                    result.append(sortedDataEntries.size() + "\r\n" + "Sorted data:\r\n");
+
+                    for (int i = 0; i < sortedDataEntries.size(); i++) {
+                        result.append(sortedDataEntries.get(i) + "\r\n");
+                    }
+                    break;
+                case "word":
+                    result.append(sortedDataEntries.size() + "\r\n" + "Sorted data: ");
+
+                    for (int i = 0; i < sortedDataEntries.size(); i++) {
+                        result.append(sortedDataEntries.get(i) + " ");
+                    }
+                    break;
+            }
+            try (PrintWriter printWriter = new PrintWriter(new File(output_File_Name))) {
+                printWriter.print(result);
+            } catch (FileNotFoundException e) {
+                System.err.println("File not found");
+            }
+        }
+    }
+
+    public static void long_Natural(String pathToFile, String output_File_Name) {
+        List<Integer> sortedDataEntries = new LinkedList<>();
+        StringBuilder result = new StringBuilder("Total numbers: ");
+
+        if (pathToFile.isEmpty()) {
+            Scanner scanner = new Scanner(System.in);
+            while (scanner.hasNext()) {
+                if (scanner.hasNextInt()) {
+                    sortedDataEntries.add(scanner.nextInt());
+                } else {
+                    String string = scanner.next();
+                    System.out.println("\"" + string + "\"" + " isn`t a long. It`s skipped.");
+                }
+            }
+        } else {
+            try (Scanner scanner = new Scanner(new File(pathToFile))) {
+                while (scanner.hasNext()) {
+                    if (scanner.hasNextInt()) {
+                        sortedDataEntries.add(scanner.nextInt());
+                    } else {
+                        String string = scanner.next();
+                        System.out.println("\"" + string + "\"" + " isn`t a long. It`s skipped.");
+                    }
+                }
+            } catch (FileNotFoundException e) {
+                System.err.println("No such file exists.");
+            }
+        }
+
+        Collections.sort(sortedDataEntries);
+
+        if (output_File_Name.isEmpty()) {
+            result.append(sortedDataEntries.size() + "\n" + "Sorted data: ");
+
+            for (int i = 0; i < sortedDataEntries.size(); i++) {
+                result.append(sortedDataEntries.get(i) + " ");
+            }
+            System.out.println(result);
+
+        } else {
+            result.append(sortedDataEntries.size() + "\r\n" + "Sorted data: ");
+
+            for (int i = 0; i < sortedDataEntries.size(); i++) {
+                result.append(sortedDataEntries.get(i) + " ");
+            }
+            try (PrintWriter printWriter = new PrintWriter(new File(output_File_Name))) {
+                printWriter.print(result);
+            } catch (FileNotFoundException e) {
+                System.err.println("File not found");
+            }
+        }
+
+        result.append(sortedDataEntries.size() + "\n" + "Sorted data: ");
+
+        for (int i = 0; i < sortedDataEntries.size(); i++) {
+            result.append(sortedDataEntries.get(i) + " ");
+        }
+    }
+
+}
